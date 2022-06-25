@@ -1,10 +1,15 @@
 grammar Lambda;
 
+file:
+    definition* expression?;
+
 expression
     : name
     | function
     | application
     ;
+
+definition: 'def' name '=' expression;
 
 name: NAME;
 

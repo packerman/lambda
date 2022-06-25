@@ -1,4 +1,4 @@
-package lambda.reader
+package lambda.expression
 
 sealed interface Expression {
 
