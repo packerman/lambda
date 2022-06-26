@@ -1,8 +1,9 @@
 package lambda.reader
 
 import lambda.expression.Expression
-import lambda.expression.Expression.*
-import lambda.expression.Expression.Function
+import lambda.expression.Expression.Companion.application
+import lambda.expression.Expression.Companion.function
+import lambda.expression.Expression.Companion.name
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -34,31 +35,31 @@ internal class ReaderTest {
         @JvmStatic
         private fun shouldReadFunction(): Stream<Arguments> =
             Stream.of(
-                Arguments.of(Function("x", Name("x")), "\\x.x"),
-                Arguments.of(Function("fst", Function("snd", Name("fst"))), "\\fst.\\snd.fst"),
-                Arguments.of(Function("f", Function("a", Application(Name("f"), Name("a")))), "\\f.\\a.(f a)")
+                Arguments.of(function("x", name("x")), "\\x.x"),
+                Arguments.of(function("fst", function("snd", name("fst"))), "\\fst.\\snd.fst"),
+                Arguments.of(function("f", function("a", application(name("f"), name("a")))), "\\f.\\a.(f a)")
             )
 
         @JvmStatic
         private fun shouldReadApplication(): Stream<Arguments> =
             Stream.of(
                 Arguments.of(
-                    Application(Function("x", Name("x")), Function("a", Function("b", Name("b")))),
+                    application(function("x", name("x")), function("a", function("b", name("b")))),
                     "(\\x.x \\a.\\b.b)"
                 ),
                 Arguments.of(
-                    Application(
-                        Application(
-                            Function(
+                    application(
+                        application(
+                            function(
                                 "f",
-                                Function(
+                                function(
                                     "a",
-                                    Application(Name("f"), Name("a"))
+                                    application(name("f"), name("a"))
                                 )
                             ),
-                            Function("s", Application(Name("s"), Name("s")))
+                            function("s", application(name("s"), name("s")))
                         ),
-                        Function("x", Name("x"))
+                        function("x", name("x"))
                     ),
                     """
                         def identity = \x.x
@@ -73,28 +74,28 @@ internal class ReaderTest {
         private fun shouldReadDefinition(): Stream<Arguments> =
             Stream.of(
                 Arguments.of(
-                    Function("x", Name("x")),
+                    function("x", name("x")),
                     """def identity = \x.x
                         identity""".trimIndent()
                 ),
                 Arguments.of(
-                    Application(
-                        Application(
-                            Function(
+                    application(
+                        application(
+                            function(
                                 "f",
-                                Function(
+                                function(
                                     "a",
-                                    Application(Name("f"), Name("a"))
+                                    application(name("f"), name("a"))
                                 )
                             ),
-                            Function(
+                            function(
                                 "x",
-                                Name("x")
+                                name("x")
                             )
                         ),
-                        Function(
+                        function(
                             "s",
-                            Application(Name("s"), Name("s"))
+                            application(name("s"), name("s"))
                         )
                     ),
                     """

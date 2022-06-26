@@ -5,17 +5,15 @@ file:
 
 expression
     : NAME # Name
-    | '\\' NAME dot expression # Function
-    | '(' expression expression ')' # Application
+    | '\\' NAME '.' body # Function
+    | '(' expression expression+ ')' # Application
     ;
 
 top_level_expression: expression+;
 
-dot: '.';
+body: expression;
 
-definition: 'def' NAME equals top_level_expression '\n';
-
-equals: '=';
+definition: 'def' NAME '=' top_level_expression '\n';
 
 NAME: [a-zA-Z0-9_+\-<>]+;
 

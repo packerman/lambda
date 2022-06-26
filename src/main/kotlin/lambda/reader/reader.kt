@@ -4,7 +4,12 @@ import lambda.expression.Expression
 import lambda.reader.LambdaParser.ExpressionContext
 import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.tree.ParseTreeWalker
-import java.util.LinkedList
+import java.util.*
+import kotlin.collections.ArrayDeque
+import kotlin.collections.HashMap
+import kotlin.collections.asSequence
+import kotlin.collections.set
+import kotlin.collections.single
 
 class DefaultListener : LambdaBaseListener() {
 
@@ -26,17 +31,13 @@ class DefaultListener : LambdaBaseListener() {
         definitions[name.text] = expression
     }
 
-    override fun exitEquals(ctx: LambdaParser.EqualsContext) {
-        createName = true
-    }
-
     override fun exitName(ctx: LambdaParser.NameContext) {
         if (createName) {
             val name = ctx.text
             val expression = if (isFreeVariable(name)) {
                 checkNotNull(definitions[name]) { "Unresolved name: $name" }
             } else {
-                Expression.Name(name)
+                Expression.name(name)
             }
             stack.addLast(expression)
         }
@@ -51,16 +52,20 @@ class DefaultListener : LambdaBaseListener() {
     override fun exitFunction(ctx: LambdaParser.FunctionContext) {
         val name = ctx.NAME()
         val body = stack.removeLast()
-        stack.addLast(Expression.Function(name.text, body))
+        stack.addLast(Expression.function(name.text, body))
         boundVariables.removeLast()
     }
 
-    override fun exitDot(ctx: LambdaParser.DotContext) {
+    override fun enterBody(ctx: LambdaParser.BodyContext) {
         createName = true
     }
 
     override fun exitApplication(ctx: LambdaParser.ApplicationContext) {
         applyExpressions(expressionChildCount(ctx))
+    }
+
+    override fun enterTop_level_expression(ctx: LambdaParser.Top_level_expressionContext) {
+        createName = true
     }
 
     override fun exitTop_level_expression(ctx: LambdaParser.Top_level_expressionContext) {
@@ -76,9 +81,9 @@ class DefaultListener : LambdaBaseListener() {
             children.addFirst(stack.removeLast())
         }
         val iterator = children.iterator()
-        var application = Expression.Application(iterator.next(), iterator.next())
+        var application = Expression.application(iterator.next(), iterator.next())
         iterator.forEachRemaining { expression ->
-            application = Expression.Application(application, expression)
+            application = Expression.application(application, expression)
         }
         stack.addLast(application)
     }
