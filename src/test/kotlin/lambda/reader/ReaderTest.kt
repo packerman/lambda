@@ -1,7 +1,9 @@
 package lambda.reader
 
-import lambda.reader.Expression.*
-import lambda.reader.Expression.Function
+import lambda.expression.Expression
+import lambda.expression.Expression.Companion.application
+import lambda.expression.Expression.Companion.function
+import lambda.expression.Expression.Companion.name
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -9,12 +11,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.util.stream.Stream
 
 internal class ReaderTest {
-
-    @ParameterizedTest
-    @MethodSource("shouldReadName")
-    internal fun shouldReadName(string: String) {
-        assertEquals(Name(string), Reader.read(string))
-    }
 
     @ParameterizedTest
     @MethodSource("shouldReadFunction")
@@ -28,32 +24,102 @@ internal class ReaderTest {
         assertEquals(expression, Reader.read(string))
     }
 
-    companion object {
+    @ParameterizedTest
+    @MethodSource("shouldReadDefinition")
+    internal fun shouldReadDefinition(expression: Expression, string: String) {
+        assertEquals(expression, Reader.read(string))
+    }
 
-        @JvmStatic
-        private fun shouldReadName(): Stream<Arguments> =
-            Stream.of(
-                Arguments.of("abc"),
-                Arguments.of("abc-123"),
-                Arguments.of("123_abc_xyz"),
-                Arguments.of("33"),
-                Arguments.of("+"),
-                Arguments.of("->")
-            )
+    companion object {
 
         @JvmStatic
         private fun shouldReadFunction(): Stream<Arguments> =
             Stream.of(
-                Arguments.of(Function("x", Name("x")), "\\x.x"),
-                Arguments.of(Function("fst", Function("snd", Name("fst"))), "\\fst.\\snd.fst"),
-                Arguments.of(Function("f", Function("a", Application(Name("f"), Name("a")))), "\\f.\\a.(f a)")
+                Arguments.of(function("x", name("x")), "\\x.x"),
+                Arguments.of(function("fst", function("snd", name("fst"))), "\\fst.\\snd.fst"),
+                Arguments.of(function("f", function("a", application(name("f"), name("a")))), "\\f.\\a.(f a)")
             )
 
         @JvmStatic
         private fun shouldReadApplication(): Stream<Arguments> =
             Stream.of(
-                Arguments.of(Application(Function("x", Name("x")), Function("a", Function("b", Name("b")))),
-                    "(\\x.x \\a.\\b.b)")
+                Arguments.of(
+                    application(function("x", name("x")), function("a", function("b", name("b")))),
+                    "(\\x.x \\a.\\b.b)"
+                ),
+                Arguments.of(
+                    application(
+                        application(
+                            function(
+                                "f",
+                                function(
+                                    "a",
+                                    application(name("f"), name("a"))
+                                )
+                            ),
+                            function("s", application(name("s"), name("s")))
+                        ),
+                        function("x", name("x"))
+                    ),
+                    """
+                        def identity = \x.x
+                        def self_apply = \s.(s s)
+                        def apply = \f.\a.(f a)
+                        apply self_apply identity
+                    """.trimIndent()
+                )
+            )
+
+        @JvmStatic
+        private fun shouldReadDefinition(): Stream<Arguments> =
+            Stream.of(
+                Arguments.of(
+                    function("x", name("x")),
+                    """def identity = \x.x
+                        identity""".trimIndent()
+                ),
+                Arguments.of(
+                    application(
+                        application(
+                            function(
+                                "f",
+                                function(
+                                    "a",
+                                    application(name("f"), name("a"))
+                                )
+                            ),
+                            function(
+                                "x",
+                                name("x")
+                            )
+                        ),
+                        function(
+                            "s",
+                            application(name("s"), name("s"))
+                        )
+                    ),
+                    """
+                        def apply = \f.\a.(f a)
+                        def a = \x.x
+                        def b = \s.(s s)
+                        ((apply a) b)
+                    """.trimIndent()
+                ),
+                Arguments.of(
+                    function(
+                        "e1",
+                        function(
+                            "e2",
+                            function(
+                                "c",
+                                application(application(name("c"), name("e1")), name("e2"))
+                            )
+                        )
+                    ),
+                    """def make_pair e1 e2 c = c e1 e2
+                        make_pair
+                        """.trimIndent()
+                )
             )
     }
 }

@@ -42,7 +42,8 @@ application {
 }
 
 tasks.generateGrammarSource {
-    arguments = arguments + listOf("-visitor", "-no-listener", "-long-messages",
-                            "-package", "lambda.reader")
+    arguments = arguments + listOf(
+        "-long-messages",
+        "-package", "lambda.reader")
 }
 
