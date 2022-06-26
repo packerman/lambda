@@ -4,12 +4,7 @@ import lambda.expression.Expression
 import lambda.reader.LambdaParser.ExpressionContext
 import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.tree.ParseTreeWalker
-import java.util.*
-import kotlin.collections.ArrayDeque
-import kotlin.collections.HashMap
-import kotlin.collections.asSequence
 import kotlin.collections.set
-import kotlin.collections.single
 
 class DefaultListener : LambdaBaseListener() {
 
@@ -21,19 +16,37 @@ class DefaultListener : LambdaBaseListener() {
 
     private val boundVariables = ArrayDeque<String>()
 
+    private var currentDefinition: Definition? = null
+
     override fun enterDefinition(ctx: LambdaParser.DefinitionContext) {
         createName = false
+        val nameTokens = ctx.NAME()
+        val name = nameTokens[0].text
+        val arguments = nameTokens
+            .asSequence()
+            .drop(1)
+            .map { it.text }
+            .toList()
+        arguments.forEach(boundVariables::addLast)
+        currentDefinition = Definition(name, arguments)
     }
 
     override fun exitDefinition(ctx: LambdaParser.DefinitionContext) {
-        val name = ctx.NAME()
-        val expression = stack.removeLast()
-        definitions[name.text] = expression
+        val definition = checkNotNull(currentDefinition)
+        var expression = stack.removeLast()
+        for (i in (definition.argumentCount - 1).downTo(0)) {
+            expression = Expression.function(definition.argument(i), expression)
+        }
+        definitions[definition.name] = expression
+        repeat(definition.argumentCount) {
+            boundVariables.removeLast()
+        }
+        currentDefinition = null
     }
 
     override fun exitName(ctx: LambdaParser.NameContext) {
+        val name = ctx.text
         if (createName) {
-            val name = ctx.text
             val expression = if (isFreeVariable(name)) {
                 checkNotNull(definitions[name]) { "Unresolved name: $name" }
             } else {
@@ -76,7 +89,7 @@ class DefaultListener : LambdaBaseListener() {
     }
 
     private fun applyExpressions(n: Int) {
-        val children = LinkedList<Expression>()
+        val children = ArrayDeque<Expression>()
         repeat(n) {
             children.addFirst(stack.removeLast())
         }
@@ -88,17 +101,27 @@ class DefaultListener : LambdaBaseListener() {
         stack.addLast(application)
     }
 
-    private fun expressionChildCount(ctx: ParserRuleContext): Int =
-        ctx.children
-            .asSequence()
-            .filterIsInstance<ExpressionContext>()
-            .count()
-
     private fun isFreeVariable(variable: String) =
         boundVariables.lastIndexOf(variable) == -1
 
     val expression: Expression
         get() = stack.single()
+
+    companion object {
+
+        private fun expressionChildCount(ctx: ParserRuleContext): Int =
+            ctx.children
+                .asSequence()
+                .filterIsInstance<ExpressionContext>()
+                .count()
+    }
+}
+
+private data class Definition(val name: String, val arguments: List<String>) {
+
+    fun argument(i: Int) = arguments[i]
+
+    val argumentCount = arguments.size
 }
 
 object Reader {
@@ -128,7 +151,7 @@ private object DefaultErrorListener : BaseErrorListener() {
         line: Int,
         charPositionInLine: Int,
         msg: String,
-        e: RecognitionException
+        e: RecognitionException?
     ) {
         error("line $line:$charPositionInLine $msg")
     }

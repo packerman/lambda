@@ -104,6 +104,21 @@ internal class ReaderTest {
                         def b = \s.(s s)
                         ((apply a) b)
                     """.trimIndent()
+                ),
+                Arguments.of(
+                    function(
+                        "e1",
+                        function(
+                            "e2",
+                            function(
+                                "c",
+                                application(application(name("c"), name("e1")), name("e2"))
+                            )
+                        )
+                    ),
+                    """def make_pair e1 e2 c = c e1 e2
+                        make_pair
+                        """.trimIndent()
                 )
             )
     }
