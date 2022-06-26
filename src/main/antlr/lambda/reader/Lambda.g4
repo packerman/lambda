@@ -1,23 +1,23 @@
 grammar Lambda;
 
 file:
-    definition* expression?;
+    definition* top_level_expression? EOF;
 
 expression
-    : name
-    | function
-    | application
+    : NAME # Name
+    | '\\' NAME dot expression # Function
+    | '(' expression expression ')' # Application
     ;
 
-definition: 'def' name '=' expression;
+top_level_expression: expression+;
 
-name: NAME;
+dot: '.';
 
-function: '\\' name '.' expression;
+definition: 'def' NAME equals top_level_expression '\n';
 
-application: '(' expression expression ')';
+equals: '=';
 
-NAME: [^a-zA-Z0-9_+\-<>]+;
+NAME: [a-zA-Z0-9_+\-<>]+;
 
 WS
     : [ \t\r\n] -> skip

@@ -1,9 +1,10 @@
 package lambda.reader
 
 import lambda.expression.Expression
-import org.antlr.v4.runtime.CharStreams
-import org.antlr.v4.runtime.CommonTokenStream
+import lambda.reader.LambdaParser.ExpressionContext
+import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.tree.ParseTreeWalker
+import java.util.LinkedList
 
 class DefaultListener : LambdaBaseListener() {
 
@@ -20,12 +21,16 @@ class DefaultListener : LambdaBaseListener() {
     }
 
     override fun exitDefinition(ctx: LambdaParser.DefinitionContext) {
-        val name = ctx.name()
+        val name = ctx.NAME()
         val expression = stack.removeLast()
         definitions[name.text] = expression
     }
 
-    override fun enterName(ctx: LambdaParser.NameContext) {
+    override fun exitEquals(ctx: LambdaParser.EqualsContext) {
+        createName = true
+    }
+
+    override fun exitName(ctx: LambdaParser.NameContext) {
         if (createName) {
             val name = ctx.text
             val expression = if (isFreeVariable(name)) {
@@ -39,26 +44,50 @@ class DefaultListener : LambdaBaseListener() {
 
     override fun enterFunction(ctx: LambdaParser.FunctionContext) {
         createName = false
-        val variable = ctx.name()
+        val variable = ctx.NAME()
         boundVariables.addLast(variable.text)
     }
 
     override fun exitFunction(ctx: LambdaParser.FunctionContext) {
-        val name = ctx.name()
+        val name = ctx.NAME()
         val body = stack.removeLast()
         stack.addLast(Expression.Function(name.text, body))
         boundVariables.removeLast()
     }
 
-    override fun enterExpression(ctx: LambdaParser.ExpressionContext?) {
+    override fun exitDot(ctx: LambdaParser.DotContext) {
         createName = true
     }
 
     override fun exitApplication(ctx: LambdaParser.ApplicationContext) {
-        val argument = stack.removeLast()
-        val function = stack.removeLast()
-        stack.addLast(Expression.Application(function, argument))
+        applyExpressions(expressionChildCount(ctx))
     }
+
+    override fun exitTop_level_expression(ctx: LambdaParser.Top_level_expressionContext) {
+        val count = expressionChildCount(ctx)
+        if (count > 1) {
+            applyExpressions(count)
+        }
+    }
+
+    private fun applyExpressions(n: Int) {
+        val children = LinkedList<Expression>()
+        repeat(n) {
+            children.addFirst(stack.removeLast())
+        }
+        val iterator = children.iterator()
+        var application = Expression.Application(iterator.next(), iterator.next())
+        iterator.forEachRemaining { expression ->
+            application = Expression.Application(application, expression)
+        }
+        stack.addLast(application)
+    }
+
+    private fun expressionChildCount(ctx: ParserRuleContext): Int =
+        ctx.children
+            .asSequence()
+            .filterIsInstance<ExpressionContext>()
+            .count()
 
     private fun isFreeVariable(variable: String) =
         boundVariables.lastIndexOf(variable) == -1
@@ -70,13 +99,32 @@ class DefaultListener : LambdaBaseListener() {
 object Reader {
     fun read(input: String): Expression {
         val charStream = CharStreams.fromString(input)
-        val lexer = LambdaLexer(charStream)
+        val lexer = LambdaLexer(charStream).apply {
+            removeErrorListeners()
+            addErrorListener(DefaultErrorListener)
+        }
         val tokenStream = CommonTokenStream(lexer)
-        val parser = LambdaParser(tokenStream)
+        val parser = LambdaParser(tokenStream).apply {
+            removeErrorListeners()
+            addErrorListener(DefaultErrorListener)
+        }
         val listener = DefaultListener()
         val tree = parser.file()
         val walker = ParseTreeWalker()
         walker.walk(listener, tree)
         return listener.expression
+    }
+}
+
+private object DefaultErrorListener : BaseErrorListener() {
+    override fun syntaxError(
+        recognizer: Recognizer<*, *>,
+        offendingSymbol: Any?,
+        line: Int,
+        charPositionInLine: Int,
+        msg: String,
+        e: RecognitionException
+    ) {
+        error("line $line:$charPositionInLine $msg")
     }
 }

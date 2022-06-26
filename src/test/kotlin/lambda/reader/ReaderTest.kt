@@ -45,6 +45,27 @@ internal class ReaderTest {
                 Arguments.of(
                     Application(Function("x", Name("x")), Function("a", Function("b", Name("b")))),
                     "(\\x.x \\a.\\b.b)"
+                ),
+                Arguments.of(
+                    Application(
+                        Application(
+                            Function(
+                                "f",
+                                Function(
+                                    "a",
+                                    Application(Name("f"), Name("a"))
+                                )
+                            ),
+                            Function("s", Application(Name("s"), Name("s")))
+                        ),
+                        Function("x", Name("x"))
+                    ),
+                    """
+                        def identity = \x.x
+                        def self_apply = \s.(s s)
+                        def apply = \f.\a.(f a)
+                        apply self_apply identity
+                    """.trimIndent()
                 )
             )
 
