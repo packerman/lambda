@@ -1,29 +1,29 @@
 package lambda.expression
 
-sealed interface Expression {
+sealed class Expression {
 
-    private data class Name(val name: String) : Expression {
+    private data class Name(val name: String) : Expression() {
         override fun replace(variable: String, replacement: Expression): Expression =
             if (this.name == variable) replacement else this
 
         override fun toString() = name
     }
 
-    private data class Function(val name: String, val body: Expression) : Expression {
+    private data class Function(val name: String, val body: Expression) : Expression() {
         override fun replace(variable: String, replacement: Expression): Expression =
             if (this.name == variable) this else function(this.name, body.replace(variable, replacement))
 
         override fun toString() = "\\$name.$body"
     }
 
-    private data class Application(val function: Expression, val argument: Expression) : Expression {
+    private data class Application(val function: Expression, val argument: Expression) : Expression() {
         override fun replace(variable: String, replacement: Expression): Expression =
             application(function.replace(variable, replacement), argument.replace(variable, replacement))
 
         override fun toString() = "($function $argument)"
     }
 
-    fun replace(variable: String, replacement: Expression): Expression
+    abstract fun replace(variable: String, replacement: Expression): Expression
 
     fun reduce(listener: ReductionListener): Expression = Companion.reduce(this, 0, listener)
 
