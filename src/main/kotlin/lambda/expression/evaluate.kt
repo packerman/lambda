@@ -52,5 +52,4 @@ class PrintListener : ReductionListener {
         println("(depth=$depth, step=$step) reduced ($function $argument) => $result")
         step++
     }
-
 }
