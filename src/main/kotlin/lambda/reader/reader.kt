@@ -4,15 +4,14 @@ import lambda.expression.Expression
 import lambda.reader.LambdaParser.ExpressionContext
 import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.tree.ParseTreeWalker
+import java.io.InputStream
 import kotlin.collections.set
 
-class DefaultListener : LambdaBaseListener() {
+class DefaultListener(private val definitions: HashMap<String, Expression>) : LambdaBaseListener() {
 
     private val stack = ArrayDeque<Expression>()
 
     private var createName = true
-
-    private val definitions = HashMap<String, Expression>()
 
     private val boundVariables = ArrayDeque<String>()
 
@@ -104,8 +103,8 @@ class DefaultListener : LambdaBaseListener() {
     private fun isFreeVariable(variable: String) =
         boundVariables.lastIndexOf(variable) == -1
 
-    val expression: Expression
-        get() = stack.single()
+    val expression: Expression?
+        get() = if (stack.isEmpty()) null else stack.single()
 
     companion object {
 
@@ -125,8 +124,19 @@ private data class Definition(val name: String, val arguments: List<String>) {
 }
 
 object Reader {
-    fun read(input: String): Expression {
-        val charStream = CharStreams.fromString(input)
+
+    fun read(input: String, definitions: HashMap<String, Expression>): Expression? =
+        read(CharStreams.fromString(input), definitions)
+
+    fun read(input: String): Expression? {
+        val definitions = HashMap<String, Expression>()
+        return read(CharStreams.fromString(input), definitions)
+    }
+
+    fun read(input: InputStream, definitions: HashMap<String, Expression>): Expression? =
+        read(CharStreams.fromStream(input), definitions)
+
+    private fun read(charStream: CharStream, definitions: HashMap<String, Expression>): Expression? {
         val lexer = LambdaLexer(charStream).apply {
             removeErrorListeners()
             addErrorListener(DefaultErrorListener)
@@ -136,7 +146,7 @@ object Reader {
             removeErrorListeners()
             addErrorListener(DefaultErrorListener)
         }
-        val listener = DefaultListener()
+        val listener = DefaultListener(definitions)
         val tree = parser.file()
         val walker = ParseTreeWalker()
         walker.walk(listener, tree)

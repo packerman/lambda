@@ -13,7 +13,7 @@ top_level_expression: expression+;
 
 body: expression;
 
-definition: 'def' NAME+ '=' top_level_expression '\n';
+definition: 'def' NAME+ '=' top_level_expression '\n'+;
 
 NAME: [a-zA-Z0-9_+\-<>]+;
 
