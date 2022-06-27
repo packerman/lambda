@@ -1,0 +1,11 @@
+def identity x = x
+
+def self_apply s = s s
+
+def apply f a = f a
+
+def select_first a b = a
+
+def select_second a b = b
+
+def make_pair a b f = f a b
