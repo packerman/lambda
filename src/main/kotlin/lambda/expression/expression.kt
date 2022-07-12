@@ -13,7 +13,7 @@ sealed class Expression {
         override fun replace(variable: String, replacement: Expression): Expression =
             if (this.name == variable) this else function(this.name, body.replace(variable, replacement))
 
-        override fun toString() = "\\$name.$body"
+        override fun toString() = "λ$name.$body"
     }
 
     private data class Application(val function: Expression, val argument: Expression) : Expression() {

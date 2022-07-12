@@ -5,7 +5,7 @@ file:
 
 expression
     : NAME # Name
-    | '\\' NAME '.' body # Function
+    | 'λ' NAME '.' body # Function
     | '(' expression expression+ ')' # Application
     ;
 

@@ -45,11 +45,11 @@ class PrintListener : ReductionListener {
     private var step = 0
 
     override fun startedReduction(depth: Int, expression: Expression) {
-        println("(depth=$depth) evaluating $expression")
+        println("(depth=$depth) eval $expression")
     }
 
     override fun reduced(depth: Int, function: Expression, argument: Expression, result: Expression) {
-        println("(depth=$depth, step=$step) reduced ($function $argument) => $result")
+        println("(depth=$depth, step=$step) reduce ($function $argument) => $result")
         step++
     }
 }

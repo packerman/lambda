@@ -35,10 +35,10 @@ internal class EvaluatorTest {
                 Arguments.of("identity", "self_apply identity"),
                 Arguments.of("identity", "(make_pair identity apply) select_first"),
                 Arguments.of("apply", "(make_pair identity apply) select_second"),
-                Arguments.of("\\p.\\q.p", "((\\x.\\y.(y x) \\p.\\q.p) \\i.i)"),
-                Arguments.of("\\j.j", "(((\\x.\\y.\\z.((x y) z) \\f.\\a.(f a)) \\i.i) \\j.j)"),
-                Arguments.of("\\b.\\k.k", "((\\p.\\q.(p q) (\\x.x \\a.\\b.a)) \\k.k)"),
-                Arguments.of("\\b.b", "(((\\f.\\g.\\x.(f (g x)) \\s.(s s)) \\a.\\b.b) \\x.\\y.x)")
+                Arguments.of("λp.λq.p", "((λx.λy.(y x) λp.λq.p) λi.i)"),
+                Arguments.of("λj.j", "(((λx.λy.λz.((x y) z) λf.λa.(f a)) λi.i) λj.j)"),
+                Arguments.of("λb.λk.k", "((λp.λq.(p q) (λx.x λa.λb.a)) λk.k)"),
+                Arguments.of("λb.b", "(((λf.λg.λx.(f (g x)) λs.(s s)) λa.λb.b) λx.λy.x)")
             )
 
         @JvmStatic

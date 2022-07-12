@@ -35,9 +35,9 @@ internal class ReaderTest {
         @JvmStatic
         private fun shouldReadFunction(): Stream<Arguments> =
             Stream.of(
-                Arguments.of(function("x", name("x")), "\\x.x"),
-                Arguments.of(function("fst", function("snd", name("fst"))), "\\fst.\\snd.fst"),
-                Arguments.of(function("f", function("a", application(name("f"), name("a")))), "\\f.\\a.(f a)")
+                Arguments.of(function("x", name("x")), "λx.x"),
+                Arguments.of(function("fst", function("snd", name("fst"))), "λfst.λsnd.fst"),
+                Arguments.of(function("f", function("a", application(name("f"), name("a")))), "λf.λa.(f a)")
             )
 
         @JvmStatic
@@ -45,7 +45,7 @@ internal class ReaderTest {
             Stream.of(
                 Arguments.of(
                     application(function("x", name("x")), function("a", function("b", name("b")))),
-                    "(\\x.x \\a.\\b.b)"
+                    "(λx.x λa.λb.b)"
                 ),
                 Arguments.of(
                     application(
@@ -62,9 +62,9 @@ internal class ReaderTest {
                         function("x", name("x"))
                     ),
                     """
-                        def identity = \x.x
-                        def self_apply = \s.(s s)
-                        def apply = \f.\a.(f a)
+                        def identity = λx.x
+                        def self_apply = λs.(s s)
+                        def apply = λf.λa.(f a)
                         apply self_apply identity
                     """.trimIndent()
                 )
@@ -75,7 +75,7 @@ internal class ReaderTest {
             Stream.of(
                 Arguments.of(
                     function("x", name("x")),
-                    """def identity = \x.x
+                    """def identity = λx.x
                         identity""".trimIndent()
                 ),
                 Arguments.of(
@@ -99,9 +99,9 @@ internal class ReaderTest {
                         )
                     ),
                     """
-                        def apply = \f.\a.(f a)
-                        def a = \x.x
-                        def b = \s.(s s)
+                        def apply = λf.λa.(f a)
+                        def a = λx.x
+                        def b = λs.(s s)
                         ((apply a) b)
                     """.trimIndent()
                 ),
