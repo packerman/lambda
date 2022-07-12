@@ -4,8 +4,8 @@ def self_apply s = s s
 
 def apply f a = f a
 
-def select_first a b = a
+def select_first fst snd = fst
 
-def select_second a b = b
+def select_second fst snd = snd
 
-def make_pair a b f = f a b
+def make_pair fst snd c = c fst snd
