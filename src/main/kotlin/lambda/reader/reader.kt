@@ -46,7 +46,10 @@ class DefaultListener(private val definitions: HashMap<String, Expression>) : La
     override fun exitName(ctx: LambdaParser.NameContext) {
         val name = ctx.text
         if (createName) {
-            val expression = if (isFreeVariable(name)) {
+            val number = tryParseNumber(name)
+            val expression = if (number != null) {
+                integerToExpression(number)
+            } else if (isFreeVariable(name)) {
                 checkNotNull(definitions[name]) { "Unresolved name: $name" }
             } else {
                 Expression.name(name)
@@ -108,11 +111,38 @@ class DefaultListener(private val definitions: HashMap<String, Expression>) : La
 
     companion object {
 
+        private val IDENTITY = Expression.function("x", Expression.name("x"))
+
+        private val FALSE = Expression.function("fst", Expression.function("snd", Expression.name("snd")))
+
         private fun expressionChildCount(ctx: ParserRuleContext): Int =
             ctx.children
                 .asSequence()
                 .filterIsInstance<ExpressionContext>()
                 .count()
+
+        private fun tryParseNumber(string: String): Int? =
+            try {
+                Integer.parseInt(string)
+            } catch (e: NumberFormatException) {
+                null
+            }
+
+        private fun integerToExpression(number: Int): Expression {
+            tailrec fun loop(i: Int, expression: Expression): Expression =
+                if (i == 0) {
+                    expression
+                } else {
+                    loop(
+                        i - 1,
+                        Expression.function(
+                            "s",
+                            Expression.application(Expression.application(Expression.name("s"), FALSE), expression)
+                        )
+                    )
+                }
+            return loop(number, IDENTITY)
+        }
     }
 }
 
