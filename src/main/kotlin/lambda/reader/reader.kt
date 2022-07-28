@@ -1,6 +1,9 @@
 package lambda.reader
 
 import lambda.expression.Expression
+import lambda.expression.Expression.Companion.application
+import lambda.expression.Expression.Companion.function
+import lambda.expression.Expression.Companion.name
 import lambda.reader.LambdaParser.ExpressionContext
 import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.tree.ParseTreeWalker
@@ -21,11 +24,7 @@ class DefaultListener(private val definitions: HashMap<String, Expression>) : La
         createName = false
         val nameTokens = ctx.NAME()
         val name = nameTokens[0].text
-        val arguments = nameTokens
-            .asSequence()
-            .drop(1)
-            .map { it.text }
-            .toList()
+        val arguments = nameTokens.asSequence().drop(1).map { it.text }.toList()
         arguments.forEach(boundVariables::addLast)
         currentDefinition = Definition(name, arguments)
     }
@@ -34,7 +33,7 @@ class DefaultListener(private val definitions: HashMap<String, Expression>) : La
         val definition = checkNotNull(currentDefinition)
         var expression = stack.removeLast()
         for (i in (definition.argumentCount - 1).downTo(0)) {
-            expression = Expression.function(definition.argument(i), expression)
+            expression = function(definition.argument(i), expression)
         }
         definitions[definition.name] = expression
         repeat(definition.argumentCount) {
@@ -46,10 +45,13 @@ class DefaultListener(private val definitions: HashMap<String, Expression>) : La
     override fun exitName(ctx: LambdaParser.NameContext) {
         val name = ctx.text
         if (createName) {
-            val expression = if (isFreeVariable(name)) {
+            val number = tryParseNumber(name)
+            val expression = if (number != null) {
+                integerToExpression(number)
+            } else if (isFreeVariable(name)) {
                 checkNotNull(definitions[name]) { "Unresolved name: $name" }
             } else {
-                Expression.name(name)
+                name(name)
             }
             stack.addLast(expression)
         }
@@ -64,7 +66,7 @@ class DefaultListener(private val definitions: HashMap<String, Expression>) : La
     override fun exitFunction(ctx: LambdaParser.FunctionContext) {
         val name = ctx.NAME()
         val body = stack.removeLast()
-        stack.addLast(Expression.function(name.text, body))
+        stack.addLast(function(name.text, body))
         boundVariables.removeLast()
     }
 
@@ -93,26 +95,41 @@ class DefaultListener(private val definitions: HashMap<String, Expression>) : La
             children.addFirst(stack.removeLast())
         }
         val iterator = children.iterator()
-        var application = Expression.application(iterator.next(), iterator.next())
+        var application = application(iterator.next(), iterator.next())
         iterator.forEachRemaining { expression ->
-            application = Expression.application(application, expression)
+            application = application(application, expression)
         }
         stack.addLast(application)
     }
 
-    private fun isFreeVariable(variable: String) =
-        boundVariables.lastIndexOf(variable) == -1
+    private fun isFreeVariable(variable: String) = boundVariables.lastIndexOf(variable) == -1
 
     val expression: Expression?
         get() = if (stack.isEmpty()) null else stack.single()
 
     companion object {
 
+        private val IDENTITY = function("x", name("x"))
+
+        private val FALSE = function("fst", function("snd", name("snd")))
+
         private fun expressionChildCount(ctx: ParserRuleContext): Int =
-            ctx.children
-                .asSequence()
-                .filterIsInstance<ExpressionContext>()
-                .count()
+            ctx.children.asSequence().filterIsInstance<ExpressionContext>().count()
+
+        private fun tryParseNumber(string: String): Int? = try {
+            Integer.parseInt(string)
+        } catch (e: NumberFormatException) {
+            null
+        }
+
+        private fun integerToExpression(number: Int): Expression {
+            tailrec fun loop(i: Int, expression: Expression): Expression = if (i == 0) {
+                expression
+            } else {
+                loop(i - 1, function("s", application(application(name("s"), FALSE), expression)))
+            }
+            return loop(number, IDENTITY)
+        }
     }
 }
 

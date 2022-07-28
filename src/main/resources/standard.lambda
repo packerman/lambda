@@ -9,3 +9,21 @@ def select_first fst snd = fst
 def select_second fst snd = snd
 
 def make_pair fst snd c = c fst snd
+
+def cond e1 e2 c = c e1 e2
+
+def true = select_first
+
+def false = select_second
+
+def not x = x false true
+
+def and x y = x y false
+
+def or x y = x true y
+
+def succ n s = (s false) n
+
+def is_zero n = n select_first
+
+def pred n = is_zero n 0 (n select_second)
